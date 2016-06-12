@@ -25,6 +25,7 @@ class UI(QtGui.QMainWindow, design.Ui_MainWindow):
 
         # It sets up layout and widgets that are defined
         self.button_blur.clicked.connect(self.generate_whitelist)
+        self.button_delete.clicked.connect(self.delete)        
         self.button_train.setCheckable(True)
         self.button_train.clicked.connect(self.toggle_train)
         self.vbox_trainedpeople = QVBoxLayout()
@@ -96,52 +97,52 @@ class UI(QtGui.QMainWindow, design.Ui_MainWindow):
         pix = QPixmap.fromImage(img)
         self.label_image.setPixmap(pix)           
 
-    def generate_whitelist(self):
+    def init_name_list(self, name_list):
+        print 'name list {}'.format(name_list)
+        for name in name_list:
+            self.add_name_to_ui(str(name))
+        
+    def get_people_selected(self):
         cnt=self.vbox_trainedpeople.count()
-        new_whitelist=[]
+        texts=[]
+        items=[]
         for i in range(0,cnt):
-            item=self.vbox_trainedpeople.itemAt(i).widget()
-            if item.isChecked():
-                new_whitelist.append(str(item.text()))
-        client.whitelist=new_whitelist
+            item=self.vbox_trainedpeople.itemAt(i)
+            widget=item.widget()
+            if widget.isChecked():
+                items.append(item)
+                texts.append(str(widget.text()))
+        return items, texts
+        
+    def generate_whitelist(self):
+        _, client.whitelist=self.get_people_selected()
         print 'client new whitelist: {}'.format(client.whitelist)
 
-    def browse_folder(self):
-        self.listview_trainedpeople.clear() # In case there are any existing elements in the list
-        directory = QtGui.QFileDialog.getExistingDirectory(self,
-                                                           "Pick a folder")
-        # execute getExistingDirectory dialog and set the directory variable to be equal
-        # to the user selected directory
+    def delete(self):
+        rm_items,rm_list=self.get_people_selected()
+        for item in rm_items:
+            if item is not None:
+                item.widget().close()
+                self.vbox_trainedpeople.removeItem(item)
 
-        if directory: # if user didn't pick a directory don't continue
-            for file_name in os.listdir(directory): # for all files, if any, in the directory
-                row = QtGui.QListWidgetItem() 
-                #Create widget
-                widget = QtGui.QWidget()
-                widgetText =  QtGui.QRadioButton(file_name, widget)
-#                widgetLayout = QtGui.QHBoxLayout()
-#                widgetLayout.addWidget(widgetText)
-#                widgetLayout.addWidget(widgetButton)
-#                widgetLayout.addStretch()
-#                widgetLayout.setSizeConstraint(QtGui.QLayout.SetFixedSize)
-#                widget.setLayout(widgetLayout)  
-#                row.setSizeHint(widget.sizeHint())
-                
-                #Add widget to QListWidget list
-                self.listview_trainedpeople.addItem(row)
-                self.listview_trainedpeople.setItemWidget(row, widget)
-#                self.listview_trainedpeople.addItem(file_name)  # add file to the listWidget
+        for name in rm_list:
+            self.name_list.remove(name)
+        # update client.py
+        client.people_to_remove.extend(rm_list)
+        new_whitelist=set(client.whitelist) - set(rm_list)
+        client.whitelist=list(new_whitelist)
 
 
 class ClientThread(QThread):
     sig_frame_available = pyqtSignal(object)
+    sig_server_info_available = pyqtSignal(object)    
     
     def __init__(self):
         super(self.__class__, self).__init__()
         self._stop = threading.Event()        
 
     def run(self):
-        client.run(self.sig_frame_available)
+        client.run(self.sig_frame_available, self.sig_server_info_available)
 
     def stop(self):
         client.alive=False
@@ -152,6 +153,7 @@ def main():
     ui = UI()        
     ui.show()
     clientThread = ClientThread()
+    clientThread.sig_server_info_available.connect(ui.init_name_list)        
     clientThread.sig_frame_available.connect(ui.set_image)
     clientThread.finished.connect(app.exit)
     clientThread.start()

@@ -26,8 +26,18 @@ class Protocol_client(object):
     JSON_KEY_ENGINE_ID = "engine_id"
     JSON_KEY_TOKEN_INJECT = "token_inject"
     JSON_KEY_TRAIN = "training"
-    JSON_KEY_ADD_PERSON = "add_person"        
+    JSON_KEY_ADD_PERSON = "add_person"
+    JSON_KEY_RM_PERSON = "remove_person"            
 
+class AppDataProtocol():
+    TYPE_add_person = "add_person"
+    TYPE_get_person = "get_person"
+    TYPE_train = "train"
+    TYPE_detect = "detect"
+    TYPE_get_state = "get_state"
+    TYPE_load_state = "load_state"
+    TYPE_reset = "reset"
+    TYPE_remove_person = "remove_person"
 
 class Protocol_application(object):
     JSON_KEY_SENSOR_TYPE = "sensor_type"

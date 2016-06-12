@@ -259,6 +259,7 @@ training_name=None
 cmd_q = Queue.Queue()
 adding_person=False
 whitelist=[]
+people_to_remove=[]
 def stop_train():
     global train
     global training_name
@@ -296,14 +297,15 @@ def overlap_whitelist_roi(whitelist_rois, roi):
         if intersect_rect(whitelist_roi, roi):
             return True
     return False
-            
+
 # a gabriel client for new gabriel servers
 # there is no token conrol mechanism
-def run(signal=None):
+def run(sig_frame_available, sig_server_info_available):
     global train
     global training_name
     global adding_person
     global whitelist
+    global people_to_remove
     alive=True    
     tokenm = tokenManager(Config.TOKEN)
     video_capture = cv2.VideoCapture(0)
@@ -315,6 +317,7 @@ def run(signal=None):
     result_receiving_thread = ResultReceivingThread(Config.GABRIEL_IP, Config.RESULT_RECEIVING_PORT, reply_q=reply_q)
     result_receiving_thread.start()
 
+    initialized=False
     token_cnt=0
     try:
         id=0
@@ -325,15 +328,21 @@ def run(signal=None):
             ret, jpeg_frame=cv2.imencode('.jpg', frame)
             if not tokenm.empty():
                 header={protocol.Protocol_client.JSON_KEY_FRAME_ID : str(id)}
+                # retrieve server names first
+                if not initialized:
+                    header[protocol.AppDataProtocol.TYPE_get_person]=True
                 # need to reconnect. to disable the detetion and recognition thread in the server
                 if train:
                     header[protocol.Protocol_client.JSON_KEY_TRAIN]=training_name
                     # only add person once
                     if adding_person:
-                        print 'adding person {}'.format(training_name)
+#                        print 'adding person {}'.format(training_name)
                         header[protocol.Protocol_client.JSON_KEY_ADD_PERSON]=training_name
                         adding_person=False
-                    
+
+                if len(people_to_remove) > 0:
+                    header[protocol.Protocol_client.JSON_KEY_RM_PERSON]=people_to_remove.pop(0)
+                        
                 header_json=json.dumps(header)
                 cmd_q.put(ClientCommand(ClientCommand.SEND, header_json))
                 cmd_q.put(ClientCommand(ClientCommand.SEND, jpeg_frame.tostring()))
@@ -352,6 +361,18 @@ def run(signal=None):
                     data_json = json.loads(data)
                     result_data=json.loads(data_json['result'])
                     type=result_data['type']
+                    if type == protocol.AppDataProtocol.TYPE_get_person:
+                        print 'server info: {}'.format(result_data)
+                        val=json.loads(result_data['value'])
+                        print 'val: {}'.format(val)
+                        name_list=val['people']
+                        print 'client.py name_list: {}'.format(name_list)
+                        sig_server_info_available.emit(name_list)                        
+                        initialized=True
+                        
+                    if not (type == protocol.AppDataProtocol.TYPE_train or type == protocol.AppDataProtocol.TYPE_detect):
+                        # ignore other type of responses for now
+                        continue
                     face_data=json.loads(result_data['value'])
                     num_faces=face_data['num']
                     face_rois=[]
@@ -393,9 +414,8 @@ def run(signal=None):
                     frame[y1:y2+1, x1:x2+1]=np.resize(np.array([0]), (y2+1-y1, x2+1-x1,3))
 #                cv2.rectangle(frame, (x1,y1), (x2, y2), (255,0,0), 5)
 
-            if signal != None:
-                rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-                signal.emit(rgb_frame)
+            rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+            sig_frame_available.emit(rgb_frame)
 #            cv2.imwrite('frame.jpg',frame)
 #            cv2.imshow('frame', frame)
             sleep(0.01)

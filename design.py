@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'design.ui'
 #
-# Created: Sun Jun 12 16:28:45 2016
+# Created: Sun Jun 12 17:49:00 2016
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -75,6 +75,6 @@ class Ui_MainWindow(object):
         self.label.setText(_translate("MainWindow", "Please Enter a Name", None))
         self.button_train.setText(_translate("MainWindow", "Train", None))
         self.label_trainedpeople.setText(_translate("MainWindow", "Trained People", None))
-        self.button_blur.setText(_translate("MainWindow", "Blur", None))
+        self.button_blur.setText(_translate("MainWindow", "Whitelist", None))
         self.button_delete.setText(_translate("MainWindow", "Delete", None))
 
