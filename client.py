@@ -358,9 +358,11 @@ def run(sig_frame_available, sig_server_info_available):
 #                print 'whitelist: {}'.format(whitelist)
                 if resp.type == ClientReply.SUCCESS:
                     data=resp.data
+                    print data
                     data_json = json.loads(data)
                     result_data=json.loads(data_json['result'])
                     type=result_data['type']
+                    print 'type: {}'.format(type)
                     if type == protocol.AppDataProtocol.TYPE_get_person:
                         print 'server info: {}'.format(result_data)
                         val=json.loads(result_data['value'])
