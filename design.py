@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'design.ui'
 #
-# Created: Sat Jun 11 13:57:47 2016
+# Created: Sun Jun 12 16:28:45 2016
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -31,12 +31,15 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.horizontalLayout = QtGui.QHBoxLayout(self.centralwidget)
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
-        self.view_image = QtGui.QGraphicsView(self.centralwidget)
-        self.view_image.setObjectName(_fromUtf8("view_image"))
-        self.horizontalLayout.addWidget(self.view_image)
+        self.label_image = QtGui.QLabel(self.centralwidget)
+        self.label_image.setObjectName(_fromUtf8("label_image"))
+        self.horizontalLayout.addWidget(self.label_image)
         self.verticalLayout = QtGui.QVBoxLayout()
         self.verticalLayout.setContentsMargins(-1, -1, -1, 20)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
+        self.label = QtGui.QLabel(self.centralwidget)
+        self.label.setObjectName(_fromUtf8("label"))
+        self.verticalLayout.addWidget(self.label)
         self.textEdit = QtGui.QTextEdit(self.centralwidget)
         self.textEdit.setObjectName(_fromUtf8("textEdit"))
         self.verticalLayout.addWidget(self.textEdit)
@@ -46,9 +49,11 @@ class Ui_MainWindow(object):
         self.label_trainedpeople = QtGui.QLabel(self.centralwidget)
         self.label_trainedpeople.setObjectName(_fromUtf8("label_trainedpeople"))
         self.verticalLayout.addWidget(self.label_trainedpeople)
-        self.listview_trainedpeople = QtGui.QListWidget(self.centralwidget)
-        self.listview_trainedpeople.setObjectName(_fromUtf8("listview_trainedpeople"))
-        self.verticalLayout.addWidget(self.listview_trainedpeople)
+        self.groupBox_trainedpeople = QtGui.QGroupBox(self.centralwidget)
+        self.groupBox_trainedpeople.setMinimumSize(QtCore.QSize(0, 400))
+        self.groupBox_trainedpeople.setTitle(_fromUtf8(""))
+        self.groupBox_trainedpeople.setObjectName(_fromUtf8("groupBox_trainedpeople"))
+        self.verticalLayout.addWidget(self.groupBox_trainedpeople)
         self.button_blur = QtGui.QPushButton(self.centralwidget)
         self.button_blur.setObjectName(_fromUtf8("button_blur"))
         self.verticalLayout.addWidget(self.button_blur)
@@ -66,6 +71,8 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow", None))
+        self.label_image.setText(_translate("MainWindow", "Image", None))
+        self.label.setText(_translate("MainWindow", "Please Enter a Name", None))
         self.button_train.setText(_translate("MainWindow", "Train", None))
         self.label_trainedpeople.setText(_translate("MainWindow", "Trained People", None))
         self.button_blur.setText(_translate("MainWindow", "Blur", None))

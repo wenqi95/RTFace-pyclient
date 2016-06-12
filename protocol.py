@@ -25,6 +25,8 @@ class Protocol_client(object):
     JSON_KEY_FRAME_ID = "frame_id"
     JSON_KEY_ENGINE_ID = "engine_id"
     JSON_KEY_TOKEN_INJECT = "token_inject"
+    JSON_KEY_TRAIN = "training"
+    JSON_KEY_ADD_PERSON = "add_person"        
 
 
 class Protocol_application(object):

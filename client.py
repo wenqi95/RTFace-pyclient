@@ -15,6 +15,7 @@ import sys
 import select
 import numpy as np
 from config import Config
+#from ui import set_image
 
 class ClientCommand(object):
     """ A command to the client thread.
@@ -175,7 +176,7 @@ class ResultReceivingThread(threading.Thread):
                     if s == self.socket: 
                         # handle the server socket
                         data = self._handle_input_data()
-                        self.reply_q.put(ClientReply(ClientReply.SUCCESS, data))
+                        self.reply_q.put(self._success_reply(data))
         self.socket.close()
 
     def join(self, timeout=None):
@@ -233,12 +234,79 @@ def enlarge_roi(roi, padding, frame_width, frame_height):
     x2=min(x2+padding,frame_width-1)
     y2=min(y2+padding,frame_height-1)
     return (x1, y1, x2, y2)
-        
+
+# not a thread safe class
+class tokenManager(object):
+    def __init__(self, token_num):
+        super(self.__class__, self).__init__()        
+        self.token_num=token_num
+        # token val is [0..token_num)
+        self.token_val=token_num -1
+        self.lock = threading.Lock()
+
+    def inc(self):
+        self.token_val= (self.token_val + 1) if (self.token_val<self.token_num) else (self.token_val)
+
+    def dec(self):
+        self.token_val= (self.token_val - 1) if (self.token_val>=0) else (self.token_val)
+
+    def empty(self):
+        return (self.token_val<0)
+
+    
+train=False
+training_name=None
+cmd_q = Queue.Queue()
+adding_person=False
+whitelist=[]
+def stop_train():
+    global train
+    global training_name
+    train=False
+    ret=training_name
+    training_name=None
+    return ret
+
+def start_train(new_training_name):
+    global train
+    global training_name
+    global adding_person
+    training_name=new_training_name
+    adding_person=True
+    train=True
+    
+def reconnect():
+    print 'reconnecting'
+    cmd_q.put(ClientCommand(ClientCommand.CLOSE, (Config.GABRIEL_IP, Config.VIDEO_STREAM_PORT)))
+    cmd_q.put(ClientCommand(ClientCommand.CONNECT, (Config.GABRIEL_IP, Config.VIDEO_STREAM_PORT)))
+
+# check if rect1 and rect2 intersect
+def intersect_rect(rect1, rect2):
+    (r1_x1, r1_y1, r1_x2, r1_y2) = rect1
+    (r2_x1, r2_y1, r2_x2, r2_y2) = rect2
+    return not(r2_x1 > r1_x2
+               or r2_x2 < r1_x1
+               or r2_y1 > r1_y2
+               or r2_y2 < r1_y1)
+
+# check if a roi intersect with any of white list rois    
+def overlap_whitelist_roi(whitelist_rois, roi):
+    for whitelist_roi in whitelist_rois:
+        # if intersect
+        if intersect_rect(whitelist_roi, roi):
+            return True
+    return False
+            
 # a gabriel client for new gabriel servers
 # there is no token conrol mechanism
-def run():
+def run(signal=None):
+    global train
+    global training_name
+    global adding_person
+    global whitelist
+    alive=True    
+    tokenm = tokenManager(Config.TOKEN)
     video_capture = cv2.VideoCapture(0)
-    cmd_q = Queue.Queue()
     network_thread=SocketClientThread(cmd_q=cmd_q)
     network_thread.start()
     cmd_q.put(ClientCommand(ClientCommand.CONNECT, (Config.GABRIEL_IP, Config.VIDEO_STREAM_PORT)) )
@@ -250,29 +318,43 @@ def run():
     token_cnt=0
     try:
         id=0
-        alive=True
         blur_rois=[]        
         while alive:
             # Capture frame-by-frame
             ret, frame = video_capture.read()
             ret, jpeg_frame=cv2.imencode('.jpg', frame)
-            header={protocol.Protocol_client.JSON_KEY_FRAME_ID : str(id)}
-            header_json=json.dumps(header)
-            # this is designed for the new gabriel framework
-            cmd_q.put(ClientCommand(ClientCommand.SEND, header_json))
-            cmd_q.put(ClientCommand(ClientCommand.SEND, jpeg_frame.tostring()))
+            if not tokenm.empty():
+                header={protocol.Protocol_client.JSON_KEY_FRAME_ID : str(id)}
+                # need to reconnect. to disable the detetion and recognition thread in the server
+                if train:
+                    header[protocol.Protocol_client.JSON_KEY_TRAIN]=training_name
+                    # only add person once
+                    if adding_person:
+                        print 'adding person {}'.format(training_name)
+                        header[protocol.Protocol_client.JSON_KEY_ADD_PERSON]=training_name
+                        adding_person=False
+                    
+                header_json=json.dumps(header)
+                cmd_q.put(ClientCommand(ClientCommand.SEND, header_json))
+                cmd_q.put(ClientCommand(ClientCommand.SEND, jpeg_frame.tostring()))
+                tokenm.dec()
 
             try:
-                resp=reply_q.get(timeout=0.01)
+                resp=reply_q.get(timeout=0.02)
+                tokenm.inc()
                 height, width, _ = frame.shape
-                padding=10
+                padding=5
+                blur_rois=[]
+                whitelist_rois=[]
+#                print 'whitelist: {}'.format(whitelist)
                 if resp.type == ClientReply.SUCCESS:
-                    blur_rois=[]
                     data=resp.data
                     data_json = json.loads(data)
                     result_data=json.loads(data_json['result'])
+                    type=result_data['type']
                     face_data=json.loads(result_data['value'])
                     num_faces=face_data['num']
+                    face_rois=[]
                     for idx in range(0,num_faces):
                         face_roi = json.loads(face_data[str(idx)])
                         x1 = face_roi['roi_x1']
@@ -280,21 +362,51 @@ def run():
                         x2 = face_roi['roi_x2']
                         y2 = face_roi['roi_y2']
                         name = face_roi['name']
-                        (x1, y1, x2, y2) = enlarge_roi( (x1,y1,x2,y2), padding, width, height)
-                        blur_rois.append( (x1, y1, x2, y2) )
+                        if name in whitelist:
+                            print 'received whitelist roi {}'.format(face_roi)
+                            whitelist_rois.append((x1, y1, x2, y2))
+                        else:
+                            (x1, y1, x2, y2) = enlarge_roi( (x1,y1,x2,y2), padding, width, height)
+                            face_rois.append( (x1, y1, x2, y2) )
+                    
+                    if type == 'detect':
+                        blur_rois=face_rois
+                    elif type == 'train':
+                        for (x1,y1,x2,y2) in face_rois:
+                            cv2.rectangle(frame, (x1,y1), (x2, y2), (0,0,255), 1)
+                            cv2.putText(frame,
+                                            'train',
+                                        (x1,y1),
+                                            0,
+                                            1,
+                                            (0,0,255));                            
+                        pass
+                    else:
+                        print 'unknown result type {}'.format(type)
             except Queue.Empty:
-                print 'no repsonse received'
+                pass
 
             for roi in blur_rois:
-                (x1, y1, x2, y2)=roi
-                frame[y1:y2+1, x1:x2+1]=np.resize(np.array([0]), (y2+1-y1, x2+1-x1,3))
-                cv2.rectangle(frame, (x1,y1), (x2, y2), (255,0,0), 5)
+#                pdb.set_trace()
+                if not overlap_whitelist_roi(whitelist_rois, roi):
+                    (x1, y1, x2, y2)=roi
+                    frame[y1:y2+1, x1:x2+1]=np.resize(np.array([0]), (y2+1-y1, x2+1-x1,3))
+#                cv2.rectangle(frame, (x1,y1), (x2, y2), (255,0,0), 5)
 
+            if signal != None:
+                rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+                signal.emit(rgb_frame)
+#            cv2.imwrite('frame.jpg',frame)
 #            cv2.imshow('frame', frame)
-            sleep(0.1)
+            sleep(0.01)
             id+=1
+            
+        network_thread.join()
+        result_receiving_thread.join()
+        video_capture.release()
+        print 'client exit!'        
     except KeyboardInterrupt:
         network_thread.join()
         result_receiving_thread.join()
         video_capture.release()
-        print 'main program exit!'
+        print 'client exit!'
