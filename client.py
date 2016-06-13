@@ -15,6 +15,7 @@ import sys
 import select
 import numpy as np
 from config import Config
+import base64
 #from ui import set_image
 
 class ClientCommand(object):
@@ -362,7 +363,7 @@ def run(sig_frame_available, sig_server_info_available):
                     data_json = json.loads(data)
                     result_data=json.loads(data_json['result'])
                     type=result_data['type']
-                    print 'type: {}'.format(type)
+#                    print 'type: {}'.format(type)
                     if type == protocol.AppDataProtocol.TYPE_get_person:
                         print 'server info: {}'.format(result_data)
                         val=json.loads(result_data['value'])
@@ -375,6 +376,14 @@ def run(sig_frame_available, sig_server_info_available):
                     if not (type == protocol.AppDataProtocol.TYPE_train or type == protocol.AppDataProtocol.TYPE_detect):
                         # ignore other type of responses for now
                         continue
+
+                    if Config.RECEIVE_FRAME:
+                        data=base64.b64decode(result_data['frame'])
+                        np_data=np.fromstring(data, dtype=np.uint8)
+                        # bgr
+                        frame=cv2.imdecode(np_data,cv2.IMREAD_COLOR)
+#                        rgb_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2RGB)        
+                        
                     face_data=json.loads(result_data['value'])
                     num_faces=face_data['num']
                     face_rois=[]
@@ -406,20 +415,27 @@ def run(sig_frame_available, sig_server_info_available):
                         pass
                     else:
                         print 'unknown result type {}'.format(type)
+
+                    if Config.RECEIVE_FRAME:                
+                        for roi in blur_rois:
+                            if not overlap_whitelist_roi(whitelist_rois, roi):
+                                (x1, y1, x2, y2)=roi
+                                frame[y1:y2+1, x1:x2+1]=np.resize(np.array([0]), (y2+1-y1, x2+1-x1,3))
+                        rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+                        sig_frame_available.emit(rgb_frame)
+                    
             except Queue.Empty:
                 pass
 
-            for roi in blur_rois:
-#                pdb.set_trace()
-                if not overlap_whitelist_roi(whitelist_rois, roi):
-                    (x1, y1, x2, y2)=roi
-                    frame[y1:y2+1, x1:x2+1]=np.resize(np.array([0]), (y2+1-y1, x2+1-x1,3))
-#                cv2.rectangle(frame, (x1,y1), (x2, y2), (255,0,0), 5)
-
-            rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-            sig_frame_available.emit(rgb_frame)
-#            cv2.imwrite('frame.jpg',frame)
-#            cv2.imshow('frame', frame)
+            if not Config.RECEIVE_FRAME:
+                print 'send out frame from camera'
+                for roi in blur_rois:
+                    if not overlap_whitelist_roi(whitelist_rois, roi):
+                        (x1, y1, x2, y2)=roi
+                        frame[y1:y2+1, x1:x2+1]=np.resize(np.array([0]), (y2+1-y1, x2+1-x1,3))
+                rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+                sig_frame_available.emit(rgb_frame)
+                
             sleep(0.01)
             id+=1
             
@@ -432,3 +448,9 @@ def run(sig_frame_available, sig_server_info_available):
         result_receiving_thread.join()
         video_capture.release()
         print 'client exit!'
+
+        
+#                cv2.rectangle(frame, (x1,y1), (x2, y2), (255,0,0), 5)
+#            cv2.imwrite('frame.jpg',frame)
+#            cv2.imshow('frame', frame)
+        
