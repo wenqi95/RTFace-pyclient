@@ -358,7 +358,7 @@ def run(sig_frame_available, sig_server_info_available):
 #                print 'whitelist: {}'.format(whitelist)
                 if resp.type == ClientReply.SUCCESS:
                     data=resp.data
-                    print data
+#                    print data
                     data_json = json.loads(data)
                     result_data=json.loads(data_json['result'])
                     type=result_data['type']
