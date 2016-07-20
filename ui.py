@@ -9,11 +9,29 @@ import sys  # We need sys so that we can pass argv to QApplication
 import design  # This file holds our MainWindow and all design related things
 # it also keeps events etc that we defined in Qt Designer
 import os  # For listing directory methods
-import client
+from client import Controller
 import numpy as np
 import re
 import pdb
 
+class ControllerThread(QThread):
+    sig_frame_available = pyqtSignal(object)
+    sig_server_info_available = pyqtSignal(object)    
+    
+    def __init__(self):
+        super(self.__class__, self).__init__()
+        
+        self.controller=Controller()
+        self._stop = threading.Event()        
+
+    def run(self):
+        self.controller.recv(self.sig_frame_available, self.sig_server_info_available)
+
+    def stop(self):
+        self.Controller.alive=False
+        self._stop.set()
+
+controllerThread = ControllerThread()
 class UI(QtGui.QMainWindow, design.Ui_MainWindow):
     def __init__(self):
         # Explaining super is out of the scope of this article
@@ -56,17 +74,6 @@ class UI(QtGui.QMainWindow, design.Ui_MainWindow):
         else:
             return None
 
-    # def add_name_to_ui(self,name):
-    #     if name not in self.name_list:
-    #         row = QtGui.QListWidgetItem() 
-    #         Create widget
-    #         widget = QtGui.QWidget()
-    #         widgetText =  QtGui.QRadioButton(name, widget)
-    #         Add widget to QListWidget list
-    #         self.listview_trainedpeople.addItem(row)
-    #         self.listview_trainedpeople.setItemWidget(row, widget)
-    #         self.name_list.append(name)
-
     def add_name_to_ui(self,name):
         if name not in self.name_list:
             cb =  QtGui.QCheckBox(name)
@@ -75,10 +82,12 @@ class UI(QtGui.QMainWindow, design.Ui_MainWindow):
             
     def toggle_train(self):
         # if not in training
-        if not client.train:
+        print 'train clicked'
+        if not controllerThread.controller.is_training:
             name=self.get_name()
+            print 'add training {}'.format(name)
             if name != None:
-                client.start_train(name)
+                controllerThread.controller.start_train(name)
                 self.button_train.setChecked(True)                
             else:
                 msg = QMessageBox()
@@ -88,7 +97,8 @@ class UI(QtGui.QMainWindow, design.Ui_MainWindow):
                 msg.exec_()
                 self.button_train.setChecked(False)                            
         else:
-            added_name=client.stop_train()
+            added_name=controllerThread.controller.stop_train()
+            print 'training stopped'            
             self.add_name_to_ui(added_name)
             self.button_train.setChecked(False)            
     
@@ -115,8 +125,8 @@ class UI(QtGui.QMainWindow, design.Ui_MainWindow):
         return items, texts
         
     def generate_whitelist(self):
-        _, client.whitelist=self.get_people_selected()
-        print 'client new whitelist: {}'.format(client.whitelist)
+        _, controllerThread.controller.whitelist=self.get_people_selected()
+        print 'client new whitelist: {}'.format(controllerThread.controller.whitelist)
 
     def delete(self):
         rm_items,rm_list=self.get_people_selected()
@@ -127,36 +137,22 @@ class UI(QtGui.QMainWindow, design.Ui_MainWindow):
 
         for name in rm_list:
             self.name_list.remove(name)
-        # update client.py
-        client.people_to_remove.extend(rm_list)
+            controllerThread.controller.remove_person(name)
+
         new_whitelist=set(client.whitelist) - set(rm_list)
-        client.whitelist=list(new_whitelist)
+        controllerThread.controller.whitelist=list(new_whitelist)
 
 
-class ClientThread(QThread):
-    sig_frame_available = pyqtSignal(object)
-    sig_server_info_available = pyqtSignal(object)    
-    
-    def __init__(self):
-        super(self.__class__, self).__init__()
-        self._stop = threading.Event()        
-
-    def run(self):
-        client.run(self.sig_frame_available, self.sig_server_info_available)
-
-    def stop(self):
-        client.alive=False
-        self._stop.set()
         
 def main():
+    global controllerThread
     app = QtGui.QApplication(sys.argv)
     ui = UI()        
     ui.show()
-    clientThread = ClientThread()
-    clientThread.sig_server_info_available.connect(ui.init_name_list)        
-    clientThread.sig_frame_available.connect(ui.set_image)
-    clientThread.finished.connect(app.exit)
-    clientThread.start()
+    controllerThread.sig_server_info_available.connect(ui.init_name_list)        
+    controllerThread.sig_frame_available.connect(ui.set_image)
+    controllerThread.finished.connect(app.exit)
+    controllerThread.start()
     
     sys.exit(app.exec_())  # and execute the app
 
