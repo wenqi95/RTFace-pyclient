@@ -98,7 +98,7 @@ class UI(QtGui.QMainWindow, design.Ui_MainWindow):
                 self.button_train.setChecked(False)                            
         else:
             added_name=controllerThread.controller.stop_train()
-            print 'training stopped'            
+            print 'training stopped. add name: {}'.format(added_name)
             self.add_name_to_ui(added_name)
             self.button_train.setChecked(False)            
     
@@ -139,10 +139,8 @@ class UI(QtGui.QMainWindow, design.Ui_MainWindow):
             self.name_list.remove(name)
             controllerThread.controller.remove_person(name)
 
-        new_whitelist=set(client.whitelist) - set(rm_list)
+        new_whitelist=set(controllerThread.controller.whitelist) - set(rm_list)
         controllerThread.controller.whitelist=list(new_whitelist)
-
-
         
 def main():
     global controllerThread

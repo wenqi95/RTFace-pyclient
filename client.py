@@ -135,7 +135,7 @@ class Controller(object):
                     break
             if -1 != flag_idx:
                 flag = self.video_streaming_thread.flags.pop(flag_idx)
-                ret = flag.type
+                ret = flag.data
         self.is_training=False
         return ret
 
