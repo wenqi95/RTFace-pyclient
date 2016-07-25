@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import cv2
+
 def enlarge_roi(roi, padding, frame_width, frame_height):
     (x1, y1, x2, y2) = roi
     x1=max(x1-padding,0)
@@ -23,5 +25,21 @@ def overlap_whitelist_roi(whitelist_rois, roi):
         # if intersect
         if intersect_rect(whitelist_roi, roi):
             return True
+    return False
+    
+
+def variance_of_laplacian(bgr_img):
+    # compute the Laplacian of the image and then return the focus
+    # measure, which is simply the variance of the Laplacian
+    if len(bgr_img.shape) == 3:
+        grey_img=cv2.cvtColor(bgr_img, cv2.COLOR_BGR2GRAY)
+    else:
+        grey_img=bgr_img
+    return cv2.Laplacian(grey_img, cv2.CV_64F).var()
+    
+# detect if an image is blurry
+def is_blurry(bgr_img, threshold=40):
+    if variance_of_laplacian(bgr_img) < threshold:
+        return True
     return False
     

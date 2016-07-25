@@ -8,6 +8,8 @@ import protocol
 import json
 import sys
 import select
+import vision
+import time
 from socketLib import *
 
 class GabrielSocketCommand(ClientCommand):
@@ -61,6 +63,10 @@ class VideoStreamingThread(SocketClientThread):
         while self.alive.isSet() and self.is_streaming:
             tokenm.getToken()
             ret, frame = video_capture.read()
+            while (vision.is_blurry(frame)):
+                print 'image blurry. skip'
+                time.sleep(0.015)
+                ret, frame = video_capture.read()                
             ret, jpeg_frame=cv2.imencode('.jpg', frame)
             header={protocol.Protocol_client.JSON_KEY_FRAME_ID : str(id)}
             self._flag(header)
