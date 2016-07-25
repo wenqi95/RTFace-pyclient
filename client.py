@@ -48,11 +48,9 @@ class Controller(object):
                 # connect and send also send reply to reply queue without any data attached
                 if resp.type == ClientReply.SUCCESS and resp.data is not None:
                     (resp_header, resp_data) =resp.data
-                    print 'header: {}'.format(resp_header)                    
                     resp_header=json.loads(resp_header)
                     if 'type' in resp_header:
                         type = resp_header['type']
-                        print 'type: {}'.format(type)
 
                         if type == protocol.AppDataProtocol.TYPE_get_person:
                             print 'get person recv: {}'.format(resp_data)

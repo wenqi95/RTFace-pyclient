@@ -63,7 +63,8 @@ class VideoStreamingThread(SocketClientThread):
         while self.alive.isSet() and self.is_streaming:
             tokenm.getToken()
             ret, frame = video_capture.read()
-            while (vision.is_blurry(frame)):
+            # threshold 50 is a very high number tolerance of blurry
+            while not (vision.is_clear(frame, threshold=60)):
                 print 'image blurry. skip'
                 time.sleep(0.015)
                 ret, frame = video_capture.read()                

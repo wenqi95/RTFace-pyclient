@@ -28,6 +28,7 @@ def overlap_whitelist_roi(whitelist_rois, roi):
     return False
     
 
+# the lower the number is, the higher of blurness    
 def variance_of_laplacian(bgr_img):
     # compute the Laplacian of the image and then return the focus
     # measure, which is simply the variance of the Laplacian
@@ -38,8 +39,8 @@ def variance_of_laplacian(bgr_img):
     return cv2.Laplacian(grey_img, cv2.CV_64F).var()
     
 # detect if an image is blurry
-def is_blurry(bgr_img, threshold=40):
+def is_clear(bgr_img, threshold=40):
     if variance_of_laplacian(bgr_img) < threshold:
-        return True
-    return False
+        return False
+    return True
     
