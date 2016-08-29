@@ -36,7 +36,7 @@ class Controller(object):
         result_cmd_q.put(ClientCommand(ClientCommand.CONNECT, (Config.GABRIEL_IP, Config.RESULT_RECEIVING_PORT)) )
         result_cmd_q.put(ClientCommand(GabrielSocketCommand.LISTEN, self.tokenm))
 
-        self.image_buffer=Queue.Queue()
+        self.image_buffer=[]
         
         self.result_receiving_thread.start()
         sleep(0.1)
@@ -83,10 +83,16 @@ class Controller(object):
                                             (x1,y1),
                                                 0,
                                                 1,
-                                                (0,0,255));                            
+                                                (0,0,255));
+
+                            # display
+                            rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+                            sig_frame_available.emit(rgb_frame)
+                                
                         else: # detect
                             blur_rois=[]
                             whitelist_rois=[]
+                            frontal_face_num=0
                             for faceROI_json in faceROI_jsons:
                                 faceROI_dict = json.loads(faceROI_json)
                                 x1 = faceROI_dict['roi_x1']
@@ -94,6 +100,9 @@ class Controller(object):
                                 x2 = faceROI_dict['roi_x2']
                                 y2 = faceROI_dict['roi_y2']
                                 name = faceROI_dict['name']
+                                if name != 'PROFILE_FACE':
+                                    frontal_face_num+=1
+                                    
                                 if name in self.whitelist:
                                     print 'received whitelist roi {}'.format(faceROI_dict)
                                     whitelist_rois.append((x1, y1, x2, y2))
@@ -106,11 +115,23 @@ class Controller(object):
                                 if not overlap_whitelist_roi(whitelist_rois, roi):
                                     (x1, y1, x2, y2)=roi
                                     frame[y1:y2+1, x1:x2+1]=np.resize(np.array([0]), (y2+1-y1, x2+1-x1,3))
-                        # display received image on the pyqt ui
-                        rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-                        self.image_buffer.put(rgb_frame)
-                        if self.image_buffer.qsize() >= Config.IMAGE_BUFFER_SZ:
-                            sig_frame_available.emit(self.image_buffer.get())
+                                    
+                            # display
+                            rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+                            remove_indices=[]
+                            
+                            # find out all images in the buffer without faces detected
+                            for idx, item in enumerate(self.image_buffer):
+                                if item[1] < frontal_face_num:
+                                    remove_indices.append(idx)
+
+                            if len(remove_indices) > 0:
+                                print 'new face detected. removing old images in the buffer that have fewer faces: {}'.format(remove_indices)
+                                self.image_buffer=[v for i, v in enumerate(self.image_buffer) if i not in remove_indices]
+
+                            self.image_buffer.append((rgb_frame, frontal_face_num)) 
+                            if len(self.image_buffer) >= Config.IMAGE_BUFFER_SZ:
+                                sig_frame_available.emit(self.image_buffer.pop(0)[0])
                             
         except KeyboardInterrupt:
             self.video_streaming_thread.join()
