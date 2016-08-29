@@ -35,6 +35,9 @@ class Controller(object):
         self.result_receiving_thread = ResultReceivingThread(cmd_q=result_cmd_q, reply_q=self.result_reply_q)    
         result_cmd_q.put(ClientCommand(ClientCommand.CONNECT, (Config.GABRIEL_IP, Config.RESULT_RECEIVING_PORT)) )
         result_cmd_q.put(ClientCommand(GabrielSocketCommand.LISTEN, self.tokenm))
+
+        self.image_buffer=Queue.Queue()
+        
         self.result_receiving_thread.start()
         sleep(0.1)
         self.video_streaming_thread.flags.append(VideoHeaderFlag(protocol.AppDataProtocol.TYPE_get_person, False, True))
@@ -104,8 +107,11 @@ class Controller(object):
                                     (x1, y1, x2, y2)=roi
                                     frame[y1:y2+1, x1:x2+1]=np.resize(np.array([0]), (y2+1-y1, x2+1-x1,3))
                         # display received image on the pyqt ui
-                        rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)                    
-                        sig_frame_available.emit(rgb_frame)
+                        rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+                        self.image_buffer.put(rgb_frame)
+                        if self.image_buffer.qsize() >= Config.IMAGE_BUFFER_SZ:
+                            sig_frame_available.emit(self.image_buffer.get())
+                            
         except KeyboardInterrupt:
             self.video_streaming_thread.join()
             self.result_receiving_thread.join()

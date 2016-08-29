@@ -11,6 +11,7 @@ import select
 import vision
 import time
 from socketLib import *
+from config import Config
 
 class GabrielSocketCommand(ClientCommand):
     STREAM=len(ClientCommand.ACTIONS)
@@ -64,7 +65,7 @@ class VideoStreamingThread(SocketClientThread):
             tokenm.getToken()
             ret, frame = video_capture.read()
             # threshold 50 is a very high number tolerance of blurry
-            while not (vision.is_clear(frame, threshold=60)):
+            while not (vision.is_clear(frame, threshold=Config.IMG_CLEAR_THRESHOLD)):
                 print 'image blurry. skip'
                 time.sleep(0.015)
                 ret, frame = video_capture.read()                
