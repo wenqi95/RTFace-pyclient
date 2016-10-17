@@ -126,6 +126,7 @@ class UI(QtGui.QMainWindow, design.Ui_MainWindow):
         
     def generate_whitelist(self):
         _, controllerThread.controller.whitelist=self.get_people_selected()
+        controllerThread.controller.set_whitelist(controllerThread.controller.whitelist)
         print 'client new whitelist: {}'.format(controllerThread.controller.whitelist)
 
     def delete(self):
@@ -141,6 +142,7 @@ class UI(QtGui.QMainWindow, design.Ui_MainWindow):
 
         new_whitelist=set(controllerThread.controller.whitelist) - set(rm_list)
         controllerThread.controller.whitelist=list(new_whitelist)
+        controllerThread.controller.set_whitelist(controllerThread.controller.whitelist)        
         
 def main():
     global controllerThread

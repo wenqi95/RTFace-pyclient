@@ -27,7 +27,8 @@ class Protocol_client(object):
     JSON_KEY_TOKEN_INJECT = "token_inject"
     JSON_KEY_TRAIN = "training"
     JSON_KEY_ADD_PERSON = "add_person"
-    JSON_KEY_RM_PERSON = "remove_person"            
+    JSON_KEY_RM_PERSON = "remove_person"
+    JSON_KEY_SET_WHITELIST = "set_whitelist"
 
 class AppDataProtocol():
     TYPE_add_person = "add_person"

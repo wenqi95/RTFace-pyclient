@@ -51,6 +51,9 @@ class Controller(object):
                 # connect and send also send reply to reply queue without any data attached
                 if resp.type == ClientReply.SUCCESS and resp.data is not None:
                     (resp_header, resp_data) =resp.data
+                    if resp_data.startswith('dummy'):
+                        print 'nothing coming out of frame revisit queue'
+                        continue
                     resp_header=json.loads(resp_header)
                     if 'type' in resp_header:
                         type = resp_header['type']
@@ -90,48 +93,48 @@ class Controller(object):
                             sig_frame_available.emit(rgb_frame)
                                 
                         else: # detect
-                            blur_rois=[]
-                            whitelist_rois=[]
-                            frontal_face_num=0
-                            for faceROI_json in faceROI_jsons:
-                                faceROI_dict = json.loads(faceROI_json)
-                                x1 = faceROI_dict['roi_x1']
-                                y1 = faceROI_dict['roi_y1']
-                                x2 = faceROI_dict['roi_x2']
-                                y2 = faceROI_dict['roi_y2']
-                                name = faceROI_dict['name']
-                                if name != 'PROFILE_FACE':
-                                    frontal_face_num+=1
+                            # blur_rois=[]
+                            # whitelist_rois=[]
+                            # frontal_face_num=0
+                            # for faceROI_json in faceROI_jsons:
+                            #     faceROI_dict = json.loads(faceROI_json)
+                            #     x1 = faceROI_dict['roi_x1']
+                            #     y1 = faceROI_dict['roi_y1']
+                            #     x2 = faceROI_dict['roi_x2']
+                            #     y2 = faceROI_dict['roi_y2']
+                            #     name = faceROI_dict['name']
+                            #     if name != 'PROFILE_FACE':
+                            #         frontal_face_num+=1
                                     
-                                if name in self.whitelist:
-                                    print 'received whitelist roi {}'.format(faceROI_dict)
-                                    whitelist_rois.append((x1, y1, x2, y2))
-                                else:
-                                    (x1, y1, x2, y2) = enlarge_roi( (x1,y1,x2,y2), 10, width, height)
-                                    blur_rois.append( (x1, y1, x2, y2) )
+                            #     if name in self.whitelist:
+                            #         print 'received whitelist roi {}'.format(faceROI_dict)
+                            #         whitelist_rois.append((x1, y1, x2, y2))
+                            #     else:
+                            #         (x1, y1, x2, y2) = enlarge_roi( (x1,y1,x2,y2), 10, width, height)
+                            #         blur_rois.append( (x1, y1, x2, y2) )
                                     
-                            for roi in blur_rois:
-                                # avoid profile blurring on whitelisted faces
-                                if not overlap_whitelist_roi(whitelist_rois, roi):
-                                    (x1, y1, x2, y2)=roi
-                                    frame[y1:y2+1, x1:x2+1]=np.resize(np.array([0]), (y2+1-y1, x2+1-x1,3))
+                            # for roi in blur_rois:
+                            #     # avoid profile blurring on whitelisted faces
+                            #     if not overlap_whitelist_roi(whitelist_rois, roi):
+                            #         (x1, y1, x2, y2)=roi
+                            #         frame[y1:y2+1, x1:x2+1]=np.resize(np.array([0]), (y2+1-y1, x2+1-x1,3))
                                     
                             # display
                             rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-                            remove_indices=[]
-                            
-                            # find out all images in the buffer without faces detected
-                            for idx, item in enumerate(self.image_buffer):
-                                if item[1] < frontal_face_num:
-                                    remove_indices.append(idx)
 
-                            if len(remove_indices) > 0:
-                                print 'new face detected. removing old images in the buffer that have fewer faces: {}'.format(remove_indices)
-                                self.image_buffer=[v for i, v in enumerate(self.image_buffer) if i not in remove_indices]
+                            # # find out all images in the buffer without faces detected
+                            # remove_indices=[]                            
+                            # for idx, item in enumerate(self.image_buffer):
+                            #     if item[1] < frontal_face_num:
+                            #         remove_indices.append(idx)
 
-                            self.image_buffer.append((rgb_frame, frontal_face_num)) 
-                            if len(self.image_buffer) >= Config.IMAGE_BUFFER_SZ:
-                                sig_frame_available.emit(self.image_buffer.pop(0)[0])
+                            # if len(remove_indices) > 0:
+                            #     print 'new face detected. removing old images in the buffer that have fewer faces: {}'.format(remove_indices)
+                            #     self.image_buffer=[v for i, v in enumerate(self.image_buffer) if i not in remove_indices]
+                            # self.image_buffer.append((rgb_frame, frontal_face_num))
+                            # if len(self.image_buffer) >= Config.IMAGE_BUFFER_SZ:
+                            #    sig_frame_available.emit(self.image_buffer.pop(0)[0])
+                            sig_frame_available.emit(rgb_frame)
                             
         except KeyboardInterrupt:
             self.video_streaming_thread.join()
@@ -166,5 +169,10 @@ class Controller(object):
 
     def remove_person(self, name):
         flag=VideoHeaderFlag(protocol.Protocol_client.JSON_KEY_RM_PERSON, False, name)
+        with self.video_streaming_thread.flag_lock:
+            self.video_streaming_thread.flags.append(flag)
+
+    def set_whitelist(self, whitelist):
+        flag=VideoHeaderFlag(protocol.Protocol_client.JSON_KEY_SET_WHITELIST, False, whitelist)
         with self.video_streaming_thread.flag_lock:
             self.video_streaming_thread.flags.append(flag)
