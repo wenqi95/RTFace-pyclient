@@ -45,6 +45,8 @@ class Controller(object):
 
     # blocking
     def recv(self, sig_frame_available, sig_server_info_available):
+        rid=0
+        st=None
         try:
             while self.alive:
                 resp=self.result_reply_q.get()
@@ -121,6 +123,11 @@ class Controller(object):
                                     
                             # display
                             rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+                            if rid % 30 == 0:
+                                if st:
+                                    print 'avg FPS: {}'.format(30.0/(time.time()-st))
+                                st = time.time()
+                            rid+=1
 
                             # # find out all images in the buffer without faces detected
                             # remove_indices=[]                            
