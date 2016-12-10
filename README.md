@@ -1,6 +1,8 @@
 #Overview
 This is the python client for RTFace, a framework that selectively blurs a person's face based on his identity in real-time to protect user's privacy.
-It leverages object tracking to achieve real-time while running face detection using [dlib](http://dlib.net), and face recognition using [OpenFace](https://cmusatyalab.github.io/openface)
+It leverages object tracking to achieve real-time while running face detection using [dlib](http://dlib.net), and face recognition using [OpenFace](https://cmusatyalab.github.io/openface).
+
+You need a computer with a **camera** to run this client.
 
 #Installation
 ## Dependency
