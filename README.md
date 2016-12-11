@@ -10,14 +10,16 @@ It leverages object tracking to achieve real-time while running face detection u
 4. launch Gabriel communication framework. Notice: Gabriel binds to eth0 interface by default.
 If your network interface is not named 'eth0', please modify the 'eth0' in '"def get_ip(iface = 'eth0')" in
 /home/privacy/dependency/gabriel/server/gabriel/common/network/util.py to match your interface name
- ```
- cd $gabriel_bin
- ./gabriel-control
- ```
- ```
- cd $gabriel_bin
- ./gabriel-ucomm
- ```
+
+```
+cd $gabriel_bin
+./gabriel-control
+```
+```
+cd $gabriel_bin
+./gabriel-ucomm
+```
+
 5. launch openface for face recognition:
  ```
  cd $rtface_bin
