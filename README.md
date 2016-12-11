@@ -21,15 +21,15 @@ If your network interface is not named 'eth0', please modify the 'eth0' in '"def
     ```
 
 5. launch openface for face recognition:
- ```
- cd $rtface_bin
- ./openface-server/cloudlet-demo-openface-server.py 2>&1
- ```
+    ```
+    cd $rtface_bin
+    ./openface-server/cloudlet-demo-openface-server.py 2>&1
+    ```
 6. launch rtface:
- ```
- cd $rtface_bin
- ./proxy.py -s 127.0.0.1:8021 2>&1
- ```
+    ```
+    cd $rtface_bin
+    ./proxy.py -s 127.0.0.1:8021 2>&1
+    ```
 
 #Client
 You need a computer with a **camera** to run the client.
@@ -38,9 +38,9 @@ You need a computer with a **camera** to run the client.
 ## Dependency
 * OpenCV (>=2.4)
 * pyQt4
-```
-sudo apt-get install libopencv-dev python-opencv python-qt4
-```
+    ```
+    sudo apt-get install libopencv-dev python-opencv python-qt4
+    ```
 ## rtface-client
 ```
 wget https://github.com/junjuew/RTFace-pyclient/archive/v0.1.zip
@@ -52,10 +52,10 @@ unzip v0.1.zip
   * VIDEO_STREAM_PORT: 9098 unless you changed the port when running RTFace server
   * RESULT_RECEIVING_PORT: 9101 unless you changed the port when running RTFace server
 2.
- ```
- cd RTFace-pyclient-0.1
- ./ui.py
- ```
+    ```
+    cd RTFace-pyclient-0.1
+    ./ui.py
+    ```
 3. Please follow the [video](https://youtu.be/gQa8oScFS94) to use the interface.
 4. Tips for training a person's face
   * 30 seconds of training is good enough
