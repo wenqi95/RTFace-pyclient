@@ -123,7 +123,7 @@ class Controller(object):
                                     
                             # display
                             rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-                            if DEBUG:
+                            if Config.DEBUG:
                                 if rid % 30 == 0:
                                     if st:
                                         print 'avg FPS: {}'.format(30.0/(time.time()-st))
