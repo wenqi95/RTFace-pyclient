@@ -123,11 +123,12 @@ class Controller(object):
                                     
                             # display
                             rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-                            if rid % 30 == 0:
-                                if st:
-                                    print 'avg FPS: {}'.format(30.0/(time.time()-st))
-                                st = time.time()
-                            rid+=1
+                            if DEBUG:
+                                if rid % 30 == 0:
+                                    if st:
+                                        print 'avg FPS: {}'.format(30.0/(time.time()-st))
+                                    st = time.time()
+                                rid+=1
 
                             # # find out all images in the buffer without faces detected
                             # remove_indices=[]                            

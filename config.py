@@ -8,3 +8,4 @@ class Config(object):
     TOKEN=1
 #    IMAGE_BUFFER_SZ=20
     IMG_CLEAR_THRESHOLD=20
+    DEBUG=False
