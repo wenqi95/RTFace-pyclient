@@ -41,6 +41,7 @@ You need a computer with a **camera** to run the client.
     ```
     sudo apt-get install libopencv-dev python-opencv python-qt4
     ```
+
 ## rtface-client
 ```
 wget https://github.com/junjuew/RTFace-pyclient/archive/v0.1.zip
