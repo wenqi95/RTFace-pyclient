@@ -72,8 +72,8 @@ class VideoStreamingThread(SocketClientThread):
             h, w, _ = frame.shape
             if w > Config.MAX_IMAGE_WIDTH:
                 ratio = float(Config.MAX_IMAGE_WIDTH)/w
-                resized_frame = cv2.resize(frame, (0,0), fx = ratio, fy = ratio)
-            ret, jpeg_frame=cv2.imencode('.jpg', resized_frame)
+                frame = cv2.resize(frame, (0,0), fx = ratio, fy = ratio)
+            ret, jpeg_frame=cv2.imencode('.jpg', frame)
             header={protocol.Protocol_client.JSON_KEY_FRAME_ID : str(id)}
             self._flag(header)
             header_json=json.dumps(header)
